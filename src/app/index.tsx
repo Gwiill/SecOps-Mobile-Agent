@@ -1,3 +1,5 @@
+import { GEMINI_API_KEY } from '@env';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { addDoc, collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import {
@@ -9,9 +11,8 @@ import {
 } from 'react-native';
 import { db } from '../../firebaseConfig';
 
-
 // Inicializa o SDK
-
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
 export default function App() {
   const [message, setMessage] = useState('');
