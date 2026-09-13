@@ -1,20 +1,19 @@
-import { GEMINI_API_KEY } from '@env';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { addDoc, collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    FlatList, KeyboardAvoidingView, Platform,
-    StyleSheet, Text,
-    TextInput, TouchableOpacity,
-    View
+  ActivityIndicator,
+  FlatList, KeyboardAvoidingView, Platform,
+  StyleSheet, Text,
+  TextInput, TouchableOpacity,
+  View
 } from 'react-native';
 import { db } from '../../firebaseConfig';
 
 // Inicializa o SDK
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+const genAI = new GoogleGenerativeAI(process.env.EXPO_PUBLIC_GEMINI_API_KEY!);
 
-export default function App() {
+export default function App() { // Correção 1: Removida a chave que fechava o App prematuramente
   const [message, setMessage] = useState('');
   const [chatHistory, setChatHistory] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -46,16 +45,27 @@ export default function App() {
         createdAt: new Date()
       });
 
-     // 3. Consultar o Gemini via SDK
+      // 3. Preparar a IA
       const model = genAI.getGenerativeModel({
-        model: "gemini-2.5-flash", // <-- Mude de 1.5 para 2.5 aqui!
+        model: "gemini-3.6-flash",
         systemInstruction: "Você é um Especialista Sênior em Segurança Ofensiva e Operações de Red Team..."
       });
 
-      const result = await model.generateContent(userText);
+      // 4. Formatar o histórico do Firebase para o padrão que o Gemini entende
+      const formattedHistory = chatHistory.map(msg => ({
+        role: msg.sender === 'user' ? 'user' : 'model',
+        parts: [{ text: msg.text }]
+      }));
+
+      // 5. Iniciar o chat COM memória e enviar a nova mensagem
+      const chat = model.startChat({
+        history: formattedHistory,
+      });
+
+      const result = await chat.sendMessage(userText);
       const aiText = result.response.text();
       
-      // 4. Salvar resposta da IA
+      // 6. Salvar resposta da IA
       await addDoc(collection(db, 'chats'), {
         text: aiText,
         sender: 'ai',
@@ -67,7 +77,7 @@ export default function App() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }; // Correção 2: Adicionada a chave e o ponto e vírgula para fechar a função sendMessage corretamente
 
   const renderMessage = ({ item }: { item: any }) => (
     <View style={[styles.messageBubble, item.sender === 'user' ? styles.userBubble : styles.aiBubble]}>
